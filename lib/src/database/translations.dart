@@ -196,11 +196,4 @@ class SKY_TRANSLATIONS {
     'CG': 'cloud-to-ground',
     'CA': 'cloud-to-air',
   };
-
-  Map<String, String> REPORT_TYPE = {
-    'METAR': 'routine report',
-    'SPECI': 'special report',
-    'AUTO': 'automatic report',
-    'COR': 'manually corrected report',
-  };
 }

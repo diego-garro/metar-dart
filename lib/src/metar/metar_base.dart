@@ -95,7 +95,7 @@ class Metar {
   String _string = '### BODY ###\n';
   String _code, _errorMessage;
   bool _correction = false;
-  String _modifier;
+  Modifier _modifier;
   ReportType _type;
   Station _station;
   int _month, _year;
@@ -303,11 +303,9 @@ class Metar {
   }
 
   void _handleModifier(RegExpMatch match) {
-    _modifier = match.namedGroup('mod');
+    _modifier = Modifier(match.namedGroup('mod'));
 
-    final mod = capitalize(_modifier);
-
-    _string += '--- $mod ---\n';
+    _string += _modifier.toString();
   }
 
   void _handleWind(RegExpMatch match, {String section = 'body'}) {
@@ -883,6 +881,9 @@ class Metar {
     final handlers = <Tuple2<RegExp, Function>>[
       Tuple2(METAR_REGEX().TYPE_RE, _handleType),
       Tuple2(METAR_REGEX().STATION_RE, _handleStation),
+      Tuple2(METAR_REGEX().COR_RE, _handleCorrection),
+      Tuple2(METAR_REGEX().TIME_RE, _handleTime),
+      Tuple2(METAR_REGEX().MODIFIER_RE, _handleModifier),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -972,7 +973,7 @@ class Metar {
   DateTime get time => _time;
 
   /// Get the modifier of the report
-  String get modifier => _modifier;
+  String get modifier => _modifier.modifier;
 
   /// Get the wind direction of the report
   /// * inDegrees
