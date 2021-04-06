@@ -97,7 +97,7 @@ class Metar {
   String _code, _errorMessage;
   bool _correction = false;
   String _modifier;
-  String _type = 'METAR';
+  ReportType _type;
   Station _station;
   int _month, _year;
   DateTime _time;
@@ -178,7 +178,7 @@ class Metar {
   String toJson() {
     final map = <String, dynamic>{
       'code': _code,
-      'type': _type,
+      'type': _type.type,
       'time': _time.toString(),
       'station': _station.toMap(),
       'wind': <String, dynamic>{
@@ -259,10 +259,15 @@ class Metar {
   }
 
   /// Here begins the body group handlers
+  // void _handleType(RegExpMatch match) {
+  //   _type = match.namedGroup('type');
+  //   _string += '--- Type ---\n'
+  //       ' * $_type';
+  // }
   void _handleType(RegExpMatch match) {
-    _type = match.namedGroup('type');
-    _string += '--- Type ---\n'
-        ' * $_type';
+    _type = ReportType(match);
+
+    _string += _type.toString();
   }
 
   void _handleStation(RegExpMatch match) {
@@ -304,7 +309,7 @@ class Metar {
     final minute = int.parse(match.namedGroup('minute'));
 
     if (minute != 0) {
-      _type = 'SPECI';
+      _type.type = 'SPECI';
     }
 
     _time = DateTime(_year, _month, day, hour, minute);
@@ -826,7 +831,7 @@ class Metar {
   // Method to parse the groups
   void _parseGroups(
     List<String> groups,
-    List<List> handlers, {
+    List<Tuple2<RegExp, Function>> handlers, {
     String section = 'body',
   }) {
     Iterable<RegExpMatch> matches;
@@ -835,16 +840,16 @@ class Metar {
     groups.forEach((group) {
       for (var i = index; i < handlers.length; i++) {
         final handler = handlers[i];
+        var obj;
 
-        if (handler[0].hasMatch(group) && !handler[2]) {
-          matches = handler[0].allMatches(group);
+        if (handler.item1.hasMatch(group)) {
+          matches = handler.item1.allMatches(group);
           if (section == 'body') {
-            handler[1](matches.elementAt(0));
+            handler.item2(matches.elementAt(0));
           } else {
-            handler[1](matches.elementAt(0), section: section);
+            handler.item2(matches.elementAt(0), section: section);
           }
 
-          handler[2] = true;
           index = i + 1;
           break;
         }
@@ -856,58 +861,98 @@ class Metar {
       }
     });
   }
+  // void _parseGroups(
+  //   List<String> groups,
+  //   List<List> handlers, {
+  //   String section = 'body',
+  // }) {
+  //   Iterable<RegExpMatch> matches;
+  //   var index = 0;
+
+  //   groups.forEach((group) {
+  //     for (var i = index; i < handlers.length; i++) {
+  //       final handler = handlers[i];
+
+  //       if (handler[0].hasMatch(group) && !handler[2]) {
+  //         matches = handler[0].allMatches(group);
+  //         if (section == 'body') {
+  //           handler[1](matches.elementAt(0));
+  //         } else {
+  //           handler[1](matches.elementAt(0), section: section);
+  //         }
+
+  //         handler[2] = true;
+  //         index = i + 1;
+  //         break;
+  //       }
+
+  //       if (handlers.indexOf(handler) == handlers.length - 1) {
+  //         _errorMessage = 'failed while processing "$group". Code: $_code';
+  //         throw ParserError(_errorMessage);
+  //       }
+  //     }
+  //   });
+  // }
 
   void _bodyParser() {
-    final handlers = [
-      // [regex, handlerMethod, featureFound]
-      [METAR_REGEX().TYPE_RE, _handleType, false],
-      [METAR_REGEX().STATION_RE, _handleStation, false],
-      [METAR_REGEX().COR_RE, _handleCorrection, false],
-      [METAR_REGEX().TIME_RE, _handleTime, false],
-      [METAR_REGEX().MODIFIER_RE, _handleModifier, false],
-      [METAR_REGEX().WIND_RE, _handleWind, false],
-      [METAR_REGEX().WINDVARIATION_RE, _handleWindVariation, false],
-      [METAR_REGEX().OPTIONALVIS_RE, _handleOptionalVisibility, false],
-      [METAR_REGEX().VISIBILITY_RE, _handleVisibility, false],
-      [METAR_REGEX().SECVISIBILITY_RE, _handleMinimunVisibility, false],
-      [METAR_REGEX().RUNWAY_RE, _handleRunway, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().TEMP_RE, _handleTemperatures, false],
-      [METAR_REGEX().PRESS_RE, _handlePressure, false],
-      [METAR_REGEX().PRESS_RE, _handlePressure, false],
-      [METAR_REGEX().RECENT_RE, _handleRecentWeather, false],
-      [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
-      [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
-      [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
-      [METAR_REGEX().SEASTATE_RE, _handleSeaState, false],
-      [METAR_REGEX().RUNWAYSTATE_RE, _handleRunwayState, false],
+    final handlers = <Tuple2<RegExp, Function>>[
+      Tuple2(METAR_REGEX().TYPE_RE, _handleType),
     ];
 
     _parseGroups(_body.split(' '), handlers);
   }
 
-  void _trendParser() {
-    final handlers = [
-      // [regex, handlerMethod, featureFound]
-      [METAR_REGEX().WIND_RE, _handleWind, false],
-      [METAR_REGEX().OPTIONALVIS_RE, _handleOptionalVisibility, false],
-      [METAR_REGEX().VISIBILITY_RE, _handleVisibility, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().WEATHER_RE, _handleWeather, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-      [METAR_REGEX().SKY_RE, _handleSky, false],
-    ];
+  // void _bodyParser() {
+  //   final handlers = [
+  //     // [regex, handlerMethod, featureFound]
+  //     [METAR_REGEX().TYPE_RE, _handleType, false],
+  //     [METAR_REGEX().STATION_RE, _handleStation, false],
+  //     [METAR_REGEX().COR_RE, _handleCorrection, false],
+  //     [METAR_REGEX().TIME_RE, _handleTime, false],
+  //     [METAR_REGEX().MODIFIER_RE, _handleModifier, false],
+  //     [METAR_REGEX().WIND_RE, _handleWind, false],
+  //     [METAR_REGEX().WINDVARIATION_RE, _handleWindVariation, false],
+  //     [METAR_REGEX().OPTIONALVIS_RE, _handleOptionalVisibility, false],
+  //     [METAR_REGEX().VISIBILITY_RE, _handleVisibility, false],
+  //     [METAR_REGEX().SECVISIBILITY_RE, _handleMinimunVisibility, false],
+  //     [METAR_REGEX().RUNWAY_RE, _handleRunway, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().TEMP_RE, _handleTemperatures, false],
+  //     [METAR_REGEX().PRESS_RE, _handlePressure, false],
+  //     [METAR_REGEX().PRESS_RE, _handlePressure, false],
+  //     [METAR_REGEX().RECENT_RE, _handleRecentWeather, false],
+  //     [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
+  //     [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
+  //     [METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear, false],
+  //     [METAR_REGEX().SEASTATE_RE, _handleSeaState, false],
+  //     [METAR_REGEX().RUNWAYSTATE_RE, _handleRunwayState, false],
+  //   ];
 
-    _parseGroups(_trend.split(' '), handlers, section: 'trend');
-  }
+  //   _parseGroups(_body.split(' '), handlers);
+  // }
+
+  // void _trendParser() {
+  //   final handlers = [
+  //     // [regex, handlerMethod, featureFound]
+  //     [METAR_REGEX().WIND_RE, _handleWind, false],
+  //     [METAR_REGEX().OPTIONALVIS_RE, _handleOptionalVisibility, false],
+  //     [METAR_REGEX().VISIBILITY_RE, _handleVisibility, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().WEATHER_RE, _handleWeather, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //     [METAR_REGEX().SKY_RE, _handleSky, false],
+  //   ];
+
+  //   _parseGroups(_trend.split(' '), handlers, section: 'trend');
+  // }
 
   // Getters
 
@@ -921,7 +966,7 @@ class Metar {
   String get remark => _rmk;
 
   /// Get the type of the report
-  String get type => _type;
+  String get type => _type.type;
 
   /// Get the station metadata
   /// * Name
