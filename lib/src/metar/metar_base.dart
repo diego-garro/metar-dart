@@ -5,7 +5,7 @@ import 'package:metar_dart/src/database/translations.dart';
 import 'package:tuple/tuple.dart';
 
 import 'package:metar_dart/src/database/stations_db.dart';
-import 'package:metar_dart/src/metar/regexp.dart';
+import 'package:metar_dart/src/models/models.dart';
 import 'package:metar_dart/src/units/units.dart';
 import 'package:metar_dart/src/utils/capitalize_string.dart';
 import 'package:metar_dart/src/utils/parser_error.dart';
