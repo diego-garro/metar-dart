@@ -56,13 +56,24 @@ class Station {
     };
   }
 
-  // double get latitude => double.parse(_lat);
-  // double get longitude => double.parse(_long);
   int get elevation => int.parse(_elev);
   String get country => _countries[_country];
   Position get position => _position;
   Angle get longitude => _position.longitude;
   Angle get latitude => _position.latitude;
+
+  @override
+  String toString() {
+    return '--- Station ---\n'
+        ' * Name: ${toMap()['name']}\n'
+        ' * ICAO: ${toMap()['icao']}\n'
+        ' * IATA: ${toMap()['iata']}\n'
+        ' * SYNOP: ${toMap()['synop']}\n'
+        ' * Longitude: ${toMap()['longitude']}\n'
+        ' * Latitude: ${toMap()['latitude']}\n'
+        ' * Elevation: ${toMap()['elevation']}\n'
+        ' * Country: ${toMap()['country']}\n';
+  }
 }
 
 /// Countries map of codes (key) and names (value)

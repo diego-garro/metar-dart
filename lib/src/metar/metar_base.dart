@@ -9,7 +9,6 @@ import 'package:metar_dart/src/models/models.dart';
 import 'package:metar_dart/src/units/units.dart';
 import 'package:metar_dart/src/utils/capitalize_string.dart';
 import 'package:metar_dart/src/utils/parser_error.dart';
-import 'package:metar_dart/src/utils/station.dart';
 
 /// Divide the METAR in three parts (if possible):
 /// * `body`
@@ -259,11 +258,6 @@ class Metar {
   }
 
   /// Here begins the body group handlers
-  // void _handleType(RegExpMatch match) {
-  //   _type = match.namedGroup('type');
-  //   _string += '--- Type ---\n'
-  //       ' * $_type';
-  // }
   void _handleType(RegExpMatch match) {
     _type = ReportType(match);
 
@@ -285,16 +279,7 @@ class Metar {
       station[7],
     );
 
-    final stationAsMap = _station.toMap();
-    _string += '--- Station ---\n'
-        ' * Name: ${stationAsMap['name']}\n'
-        ' * ICAO: ${stationAsMap['icao']}\n'
-        ' * IATA: ${stationAsMap['iata']}\n'
-        ' * SYNOP: ${stationAsMap['synop']}\n'
-        ' * Longitude: ${stationAsMap['longitude']}\n'
-        ' * Latitude: ${stationAsMap['latitude']}\n'
-        ' * Elevation: ${stationAsMap['elevation']}\n'
-        ' * Country: ${stationAsMap['country']}\n';
+    _string += _station.toString();
   }
 
   void _handleCorrection(RegExpMatch match) {
@@ -897,6 +882,7 @@ class Metar {
   void _bodyParser() {
     final handlers = <Tuple2<RegExp, Function>>[
       Tuple2(METAR_REGEX().TYPE_RE, _handleType),
+      Tuple2(METAR_REGEX().STATION_RE, _handleStation),
     ];
 
     _parseGroups(_body.split(' '), handlers);

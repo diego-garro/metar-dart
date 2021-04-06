@@ -4,7 +4,7 @@ import 'package:metar_dart/metar_dart.dart';
 
 void main() {
   final code =
-      'KJFK 122051Z 32004KT 10SM OVC065 M02/M15 A3031 RMK AO2 SLP264 T10171150 56004';
+      'METAR KJFK 122051Z 32004KT 10SM OVC065 M02/M15 A3031 RMK AO2 SLP264 T10171150 56004';
   final metar = Metar(code);
 
   group('Test the station features of METAR', () {
