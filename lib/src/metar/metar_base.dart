@@ -100,11 +100,8 @@ class Metar {
   Station _station;
   int _month, _year;
   DateTime _time;
-  Direction _windDirection,
-      _trendWindDirection,
-      _windVariationFrom,
-      _windVariationTo;
-  Speed _windSpeed, _windGust, _trendWindSpeed, _trendWindGust;
+  Wind _wind, _trendWind;
+  WindVariation _windVariation;
   Length _visibility, _trendVisibility, _minimumVisibility;
   Direction _minimumVisibilityDirection;
   Length _optionalVisibility, _trendOptionalVisibility;
@@ -183,19 +180,19 @@ class Metar {
       'wind': <String, dynamic>{
         'units': 'knots',
         'direction': <String, String>{
-          'degrees': '${_windDirection?.directionInDegrees}',
-          'cardinalPoint': '${_windDirection.cardinalPoint}',
+          'degrees': '${_wind.direction?.directionInDegrees}',
+          'cardinalPoint': '${_wind.direction?.cardinalPoint}',
         },
-        'speed': '${_windSpeed?.inKnot}',
-        'gust': '${_windGust?.inKnot}',
+        'speed': '${_wind.speed?.inKnot}',
+        'gust': '${_wind.gust?.inKnot}',
         'variation': <String, Map<String, String>>{
           'from': <String, String>{
-            'degrees': '${_windVariationFrom?.directionInDegrees}',
-            'cardinalPoint': '${_windVariationFrom?.cardinalPoint}',
+            'degrees': '${_windVariation?.from?.directionInDegrees}',
+            'cardinalPoint': '${_windVariation?.from?.cardinalPoint}',
           },
           'to': <String, String>{
-            'degrees': '${_windVariationTo?.directionInDegrees}',
-            'cardinalPoint': '${_windVariationTo?.cardinalPoint}',
+            'degrees': '${_windVariation?.to?.directionInDegrees}',
+            'cardinalPoint': '${_windVariation?.to?.cardinalPoint}',
           },
         },
       },
@@ -309,68 +306,21 @@ class Metar {
   }
 
   void _handleWind(RegExpMatch match, {String section = 'body'}) {
-    final windDirection = match.namedGroup('dir');
-    final windSpeed = match.namedGroup('speed');
-    final windGust = match.namedGroup('gust');
-    final units = match.namedGroup('units');
-
-    Direction dirValue;
-    Speed speedValue, gustValue;
-
-    if (windDirection != null && RegExp(r'^\d{3}$').hasMatch(windDirection)) {
-      dirValue = Direction.fromDegrees(value: windDirection);
-    } else {
-      dirValue = Direction.fromUndefined(value: windDirection);
-    }
-
-    if (windSpeed != null && RegExp(r'^\d{2}$').hasMatch(windSpeed)) {
-      if (units == 'KT' || units == 'KTS') {
-        speedValue = Speed.fromKnot(value: double.parse(windSpeed));
-      } else {
-        speedValue = Speed.fromMeterPerSecond(value: double.parse(windSpeed));
-      }
-    }
-
-    if (windGust != null && RegExp(r'^\d{2}').hasMatch(windGust)) {
-      if (units == 'KT' || units == 'KTS') {
-        gustValue = Speed.fromKnot(value: double.parse(windGust));
-      } else {
-        gustValue = Speed.fromMeterPerSecond(value: double.parse(windGust));
-      }
-    }
+    final wind = Wind(match);
 
     if (section == 'body') {
-      _windDirection = dirValue;
-      _windSpeed = speedValue;
-      _windGust = gustValue;
+      _wind = wind;
     } else {
-      _trendWindDirection = dirValue;
-      _trendWindSpeed = speedValue;
-      _trendWindGust = gustValue;
+      _trendWind = wind;
     }
 
-    _string += '--- Wind ---\n'
-        ' * Direction:\n'
-        '   - Degrees: ${dirValue.variable ? 'Varibale' : '${dirValue.directionInDegrees}°'}\n'
-        '   - Cardinal point: ${dirValue.variable ? 'Variable' : dirValue.cardinalPoint}\n'
-        ' * Speed: ${speedValue != null ? speedValue.inKnot : 0.0} knots\n'
-        ' * Gust: ${gustValue != null ? gustValue.inKnot : 0.0} knots\n';
+    _string += wind.toString();
   }
 
   void _handleWindVariation(RegExpMatch match) {
-    final from = match.namedGroup('from');
-    final to = match.namedGroup('to');
+    _windVariation = WindVariation(match);
 
-    _windVariationFrom = Direction.fromDegrees(value: from);
-    _windVariationTo = Direction.fromDegrees(value: to);
-
-    _string += ' * Wind direction variation:\n'
-        '   - From:\n'
-        '     > Degrees: ${_windVariationFrom.directionInDegrees}\n'
-        '     > Cardinal point: ${_windVariationTo.cardinalPoint}\n'
-        '   - To:\n'
-        '     > Degrees: ${_windVariationTo.directionInDegrees}\n'
-        '     > Cardinal point: ${_windVariationTo.cardinalPoint}\n';
+    _string += _windVariation.toString();
   }
 
   void _handleOptionalVisibility(RegExpMatch match, {String section = 'body'}) {
@@ -884,6 +834,8 @@ class Metar {
       Tuple2(METAR_REGEX().COR_RE, _handleCorrection),
       Tuple2(METAR_REGEX().TIME_RE, _handleTime),
       Tuple2(METAR_REGEX().MODIFIER_RE, _handleModifier),
+      Tuple2(METAR_REGEX().WIND_RE, _handleWind),
+      Tuple2(METAR_REGEX().WINDVARIATION_RE, _handleWindVariation),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -975,31 +927,28 @@ class Metar {
   /// Get the modifier of the report
   String get modifier => _modifier.modifier;
 
-  /// Get the wind direction of the report
+  /// Get the wind features of the report
+  /// * Direction
+  ///  ** inDegrees
+  ///  ** inRadians
+  ///  ** inGradians
+  ///  ** cardinalPoint
+  /// * Speed and Gust
+  ///  ** inKnot
+  ///  ** inKm/h
+  ///  ** inM/s
+  ///  ** inMiles/h
+  /// Some times it can be null depending of station, be carefull
+  Wind get wind => _wind;
+
+  /// Get the wind variation directions from and to, both instaces of Direction
   /// * inDegrees
   /// * inRadians
   /// * inGradians
   /// * cardinalPoint
-  /// Some times it can be null depending of station, be nullsafety
-  Direction get windDirection => _windDirection;
+  /// Some times it can be null depending of station, be carefull
+  WindVariation get windVariation => _windVariation;
 
-  /// Get the medium wind speed of the report
-  /// * inKnot
-  /// * inKm/h
-  /// * inM/s
-  /// * inMiles/h
-  /// Some times it can be null depending of station, be nullsafety
-  Speed get windSpeed => _windSpeed;
-
-  /// Get the medium gust wind speed of the report
-  /// * inKnot
-  /// * inKm/h
-  /// * inM/s
-  /// * inMiles/h
-  /// Some times it can be null depending of station, be nullsafety
-  Speed get windGust => _windGust;
-  Direction get windVariationFrom => _windVariationFrom;
-  Direction get windVariationTo => _windVariationTo;
   Length get visibility => _visibility;
   bool get cavok => _cavok;
   Length get minimumVisibility => _minimumVisibility;
@@ -1023,24 +972,24 @@ class Metar {
   /// * inRadians
   /// * inGradians
   /// * cardinalPoint
-  /// Some times it can be null depending of station, be nullsafety
-  Direction get trendWindDirection => _trendWindDirection;
+  /// Some times it can be null depending of station, be carefull
+  Direction get trendWindDirection => _trendWind.direction;
 
   /// Get the medium wind speed of the report
   /// * inKnot
   /// * inKm/h
   /// * inM/s
   /// * inMiles/h
-  /// Some times it can be null depending of station, be nullsafety
-  Speed get trendWindSpeed => _trendWindSpeed;
+  /// Some times it can be null depending of station, be carefull
+  Speed get trendWindSpeed => _trendWind.speed;
 
   /// Get the medium gust wind speed of the report
   /// * inKnot
   /// * inKm/h
   /// * inM/s
   /// * inMiles/h
-  /// Some times it can be null depending of station, be nullsafety
-  Speed get trendWindGust => _trendWindGust;
+  /// Some times it can be null depending of station, be carefull
+  Speed get trendWindGust => _trendWind.gust;
 
   Length get trendVisibility => _trendVisibility;
   List<Map<String, String>> get trendWeather => _trendWeather;
