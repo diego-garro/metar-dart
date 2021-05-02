@@ -1,82 +1,77 @@
 import 'package:metar_dart/src/units/angle.dart';
+import 'package:metar_dart/src/utils/errors.dart';
 
 class Direction {
   /*
    * The value of this direction from Metar report
   */
-  final Map<String, double> _compassDirs = {
-    'N': 0.0,
-    'NNE': 22.5,
-    'NE': 45.0,
-    'ENE': 67.5,
-    'E': 90.0,
-    'ESE': 112.5,
-    'SE': 135.0,
-    'SSE': 157.5,
-    'S': 180.0,
-    'SSW': 202.5,
-    'SW': 225.0,
-    'WSW': 247.5,
-    'W': 270.0,
-    'WNW': 292.5,
-    'NW': 315.0,
-    'NNW': 337.5,
+  final Map<String, List<double>> _compassDirs = {
+    'N': [348.75, 11.25],
+    'NNE': [11.25, 33.75],
+    'NE': [33.75, 56.25],
+    'ENE': [56.25, 78.75],
+    'E': [78.75, 101.25],
+    'ESE': [101.25, 123.75],
+    'SE': [123.75, 146.25],
+    'SSE': [146.25, 168.75],
+    'S': [168.75, 191.25],
+    'SSW': [191.25, 213.75],
+    'SW': [213.75, 236.25],
+    'WSW': [236.25, 258.75],
+    'W': [258.75, 281.25],
+    'WNW': [281.25, 303.75],
+    'NW': [303.75, 326.25],
+    'NNW': [326.25, 348.75],
   };
   Angle _direction;
   String _directionStr;
   bool _variable = false;
 
   Direction.fromDegrees({String value = '000'}) {
-    _direction = Angle.fromDegrees(value: double.parse(value));
-    _directionStr = _cardinalPoint(value);
+    final _value = double.parse(value);
+    if (_value > 360 || _value < 0) {
+      throw ValueError('Value $value must be in range 0-360.');
+    }
+    _direction = Angle.fromDegrees(value: _value);
+
+    if (_value >= 348.75 || _value < 11.25) {
+      _directionStr = 'N';
+    }
+
+    for (var key in _compassDirs.keys.toList().sublist(1)) {
+      if (_value >= _compassDirs[key].first &&
+          _value < _compassDirs[key].last) {
+        _directionStr = key;
+      }
+    }
   }
   Direction.fromUndefined({String value = '///'}) {
-    if (_compassDirs.keys.toList().contains(value)) {
-      _direction = Angle.fromDegrees(value: _compassDirs[value]);
-    } else {
-      if (value == 'VRB') {
-        _variable = true;
-      }
+    if (value == 'VRB') {
+      _variable = true;
       _direction = Angle.fromDegrees(value: 0.0);
     }
-    _directionStr = _cardinalPoint(value);
+  }
+  Direction.fromCardinalDirection({String value = 'N'}) {
+    double angle;
+
+    if (_compassDirs.keys.toList().contains(value)) {
+      _directionStr = value;
+
+      angle = (value == 'N')
+          ? 360.0
+          : (_compassDirs[value][0] + _compassDirs[value][1]) / 2;
+      _direction = Angle.fromDegrees(value: angle);
+    } else {
+      throw ValueError(
+          'Value $value is not a cardinal direction or is not supported.');
+    }
   }
 
   double get directionInDegrees => _returnValue('degrees');
   double get directionInRadians => _returnValue('radians');
   double get directionInGradians => _returnValue('gradians');
-  String get cardinalPoint => _directionStr;
+  String get cardinalDirection => _directionStr;
   bool get variable => _variable;
-
-  String _cardinalPoint(String value) {
-    String point;
-    double angle;
-    for (var dir in _compassDirs.keys.toList()) {
-      if (value == dir) {
-        point = value;
-        break;
-      } else if (RegExp(r'^\d{3}$').hasMatch(value)) {
-        angle = double.parse(value);
-        if (angle == _compassDirs[dir]) {
-          point = dir;
-          break;
-        } else if (angle >= 348.75) {
-          point = 'N';
-          break;
-        } else if (angle >= _compassDirs[dir] - 11.25 &&
-            angle < _compassDirs[dir] + 11.25) {
-          point = dir;
-          break;
-        } else {
-          point = 'INVALID ANGLE';
-        }
-      } else {
-        point = 'NO DATA';
-        continue;
-      }
-    }
-    return point;
-  }
 
   double _returnValue(String format) {
     if (_directionStr == 'VRB' ||
