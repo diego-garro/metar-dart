@@ -14,7 +14,7 @@ void main() {
     });
 
     test('Test the cardinal point of wind direction', () {
-      final value = metar.wind.direction.cardinalPoint;
+      final value = metar.wind.direction.cardinalDirection;
       expect(value, 'NNW');
     });
   });
@@ -60,7 +60,7 @@ void main() {
     });
 
     test('Test the from variation cardinal point', () {
-      final value = metar.windVariation?.from?.cardinalPoint;
+      final value = metar.windVariation?.from?.cardinalDirection;
       expect(value, 'NW');
     });
 
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('Test the to variation cardinal point', () {
-      final value = metar.windVariation?.to?.cardinalPoint;
+      final value = metar.windVariation?.to?.cardinalDirection;
       expect(value, 'NNE');
     });
   });

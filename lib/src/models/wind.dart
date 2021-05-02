@@ -47,7 +47,7 @@ class Wind {
     return '--- Wind ---\n'
         ' * Direction:\n'
         '   - Degrees: ${_direction.variable ? 'Varibale' : '${_direction.directionInDegrees}°'}\n'
-        '   - Cardinal point: ${_direction.variable ? 'Variable' : _direction.cardinalPoint}\n'
+        '   - Cardinal point: ${_direction.variable ? 'Variable' : _direction.cardinalDirection}\n'
         ' * Speed: ${_speed != null ? _speed.inKnot : 0.0} knots\n'
         ' * Gust: ${_gust != null ? _gust.inKnot : 0.0} knots\n';
   }

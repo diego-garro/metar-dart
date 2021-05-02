@@ -15,10 +15,10 @@ class WindVariation {
     return ' * Wind direction variation:\n'
         '   - From:\n'
         '     > Degrees: ${_from.directionInDegrees}\n'
-        '     > Cardinal point: ${_from.cardinalPoint}\n'
+        '     > Cardinal point: ${_from.cardinalDirection}\n'
         '   - To:\n'
         '     > Degrees: ${_to.directionInDegrees}\n'
-        '     > Cardinal point: ${_to.cardinalPoint}\n';
+        '     > Cardinal point: ${_to.cardinalDirection}\n';
   }
 
   // Getters
