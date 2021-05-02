@@ -8,7 +8,7 @@ import 'package:metar_dart/src/database/stations_db.dart';
 import 'package:metar_dart/src/models/models.dart';
 import 'package:metar_dart/src/units/units.dart';
 import 'package:metar_dart/src/utils/capitalize_string.dart';
-import 'package:metar_dart/src/utils/parser_error.dart';
+import 'package:metar_dart/src/utils/errors.dart';
 
 /// Divide the METAR in three parts (if possible):
 /// * `body`
@@ -68,6 +68,23 @@ String _sanitizeWindshear(String code) {
   return code;
 }
 
+String _sanitizeVisibility(String code) {
+  final regex = RegExp(r'\s(?<int>\d+)\s(?<frac>\d/\dSM)\s');
+
+  for (var i = 0; i < 2; i++) {
+    if (regex.hasMatch(code)) {
+      final match = regex.allMatches(code);
+      final matches = match.elementAt(0);
+      code = code.replaceFirst(
+        regex,
+        ' ${matches.namedGroup("int")}_${matches.namedGroup("frac")} ',
+      );
+    }
+  }
+
+  return code;
+}
+
 Map<String, String> _extractRunwayData(
   Tuple7<String, String, String, Length, String, Length, String> runway,
 ) {
@@ -102,7 +119,7 @@ class Metar {
   DateTime _time;
   Wind _wind, _trendWind;
   WindVariation _windVariation;
-  Length _visibility, _trendVisibility, _minimumVisibility;
+  Visibility _visibility, _trendVisibility, _minimumVisibility;
   Direction _minimumVisibilityDirection;
   Length _optionalVisibility, _trendOptionalVisibility;
   bool _cavok, _trendCavok;
@@ -127,6 +144,7 @@ class Metar {
     }
 
     code = _sanitizeWindshear(code);
+    code = _sanitizeVisibility(code);
     _code = code.trim().replaceAll(RegExp(r'\s+'), ' ').replaceAll('=', '');
     final dividedCodeList = _divideCode(_code);
 
@@ -181,29 +199,30 @@ class Metar {
         'units': 'knots',
         'direction': <String, String>{
           'degrees': '${_wind.direction?.directionInDegrees}',
-          'cardinalPoint': '${_wind.direction?.cardinalPoint}',
+          'cardinalPoint': '${_wind.direction?.cardinalDirection}',
         },
         'speed': '${_wind.speed?.inKnot}',
         'gust': '${_wind.gust?.inKnot}',
         'variation': <String, Map<String, String>>{
           'from': <String, String>{
             'degrees': '${_windVariation?.from?.directionInDegrees}',
-            'cardinalPoint': '${_windVariation?.from?.cardinalPoint}',
+            'cardinalPoint': '${_windVariation?.from?.cardinalDirection}',
           },
           'to': <String, String>{
             'degrees': '${_windVariation?.to?.directionInDegrees}',
-            'cardinalPoint': '${_windVariation?.to?.cardinalPoint}',
+            'cardinalPoint': '${_windVariation?.to?.cardinalDirection}',
           },
         },
       },
       'visibility': <String, dynamic>{
         'units': 'meters',
-        'prevailing': '${_visibility?.inMeters}',
+        'prevailing': '${_visibility?.value?.inMeters}',
         'minimum': <String, dynamic>{
-          'visibility': '${_minimumVisibility?.inMeters}',
+          'visibility': '${_minimumVisibility?.value?.inMeters}',
           'direction': <String, String>{
             'degrees': '${_minimumVisibilityDirection?.directionInDegrees}',
-            'cardinalPoint': '${_minimumVisibilityDirection?.cardinalPoint}',
+            'cardinalPoint':
+                '${_minimumVisibilityDirection?.cardinalDirection}',
           },
         },
         'runwayRanges': <Map<String, String>>[
@@ -323,87 +342,25 @@ class Metar {
     _string += _windVariation.toString();
   }
 
-  void _handleOptionalVisibility(RegExpMatch match, {String section = 'body'}) {
-    final optVis = match.namedGroup('opt');
-
-    if (section == 'body') {
-      _optionalVisibility = Length.fromMiles(value: double.parse(optVis));
-    } else {
-      _trendOptionalVisibility = Length.fromMiles(value: double.parse(optVis));
-    }
-  }
-
   void _handleVisibility(RegExpMatch match, {String section = 'body'}) {
-    String units, vis, extreme, visExtreme, cavok;
-    Length value;
-
-    units = match.namedGroup('units');
-    vis = match.namedGroup('vis');
-    extreme = match.namedGroup('extreme');
-    visExtreme = match.namedGroup('visextreme');
-    cavok = match.namedGroup('cavok');
+    final vis = Visibility(match);
 
     if (section == 'body') {
-      (cavok == null) ? _cavok = false : _cavok = true;
+      _visibility = vis;
     } else {
-      (cavok == null) ? _trendCavok = false : _trendCavok = true;
-    }
-
-    if (visExtreme != null && visExtreme.contains('/')) {
-      var items = visExtreme.split('/');
-      visExtreme = '${int.parse(items[0]) / int.parse(items[1])}';
-    }
-
-    units ??= units = 'M';
-
-    Length visFromMiles(Length optionalVis) {
-      Length value;
-
-      if (optionalVis != null) {
-        value = Length.fromMiles(
-          value: optionalVis.inMiles + double.parse(visExtreme),
-        );
-      } else {
-        value = Length.fromMiles(value: double.parse(visExtreme));
-      }
-
-      return value;
-    }
-
-    if (units == 'SM' && section == 'body') {
-      value = visFromMiles(_optionalVisibility);
-    } else if (units == 'SM') {
-      value = visFromMiles(_trendOptionalVisibility);
-    } else if (units == 'KM') {
-      value = Length.fromKilometers(value: double.parse(visExtreme));
-    } else {
-      if (vis == '9999' || _cavok) {
-        value = Length.fromMeters(value: double.parse('10000'));
-      } else {
-        value = Length.fromMeters(value: double.parse(vis));
-      }
-    }
-
-    if (section == 'body') {
-      _visibility = value;
-    } else {
-      _trendVisibility = value;
+      _trendVisibility = vis;
     }
 
     _string += '--- Visibility ---\n'
-        ' * Prevailing: ${value.inMeters} meters\n'
+        ' * Prevailing: ${vis.value.inMeters} meters\n'
         ' * ${(cavok != null) ? 'CAVOK' : 'No CAVOK'}\n';
   }
 
   void _handleMinimunVisibility(RegExpMatch match) {
-    final minVis = match.namedGroup('vis');
-    final dir = match.namedGroup('dir');
-
-    _minimumVisibility = Length.fromMeters(value: double.parse(minVis));
-    _minimumVisibilityDirection = Direction.fromUndefined(value: dir);
+    _minimumVisibility = Visibility(match);
 
     _string +=
-        ' * Minimum visibility: ${_minimumVisibility.inMeters} meters to $dir\n';
+        ' * Minimum visibility: ${_minimumVisibility.value.inMeters} meters to ${_minimumVisibility.direction.cardinalDirection}\n';
   }
 
   void _handleRunway(RegExpMatch match) {
@@ -787,10 +744,10 @@ class Metar {
           break;
         }
 
-        if (handlers.indexOf(handler) == handlers.length - 1) {
-          _errorMessage = 'failed while processing "$group". Code: $_code';
-          throw ParserError(_errorMessage);
-        }
+        // if (handlers.indexOf(handler) == handlers.length - 1) {
+        //   _errorMessage = 'failed while processing "$group". Code: $_code';
+        //   throw ParserError(_errorMessage);
+        // }
       }
     });
   }
@@ -836,6 +793,8 @@ class Metar {
       Tuple2(METAR_REGEX().MODIFIER_RE, _handleModifier),
       Tuple2(METAR_REGEX().WIND_RE, _handleWind),
       Tuple2(METAR_REGEX().WINDVARIATION_RE, _handleWindVariation),
+      Tuple2(METAR_REGEX().VISIBILITY_RE, _handleVisibility),
+      Tuple2(METAR_REGEX().VISIBILITY_RE, _handleMinimunVisibility),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -949,9 +908,9 @@ class Metar {
   /// Some times it can be null depending of station, be carefull
   WindVariation get windVariation => _windVariation;
 
-  Length get visibility => _visibility;
+  Visibility get visibility => _visibility;
   bool get cavok => _cavok;
-  Length get minimumVisibility => _minimumVisibility;
+  Visibility get minimumVisibility => _minimumVisibility;
   Direction get minimumVisibilityDirection => _minimumVisibilityDirection;
   List<Tuple7<String, String, String, Length, String, Length, String>>
       get runwayRanges => _runway;
@@ -991,7 +950,7 @@ class Metar {
   /// Some times it can be null depending of station, be carefull
   Speed get trendWindGust => _trendWind.gust;
 
-  Length get trendVisibility => _trendVisibility;
+  Visibility get trendVisibility => _trendVisibility;
   List<Map<String, String>> get trendWeather => _trendWeather;
   List<Tuple3<String, Length, String>> get trendSky => _trendSky;
 }
