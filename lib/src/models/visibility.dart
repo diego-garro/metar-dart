@@ -25,10 +25,10 @@ class Visibility {
       _direction = Direction.fromCardinalDirection(value: _dir);
     }
 
-    _set_visibility();
+    _setVisibility();
   }
 
-  void _set_visibility() {
+  void _setVisibility() {
     if (_visExtreme != null && _visExtreme.contains('/')) {
       var items = _visExtreme.split('/');
 

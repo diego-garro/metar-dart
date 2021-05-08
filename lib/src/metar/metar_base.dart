@@ -86,16 +86,16 @@ String _sanitizeVisibility(String code) {
 }
 
 Map<String, String> _extractRunwayData(
-  Tuple7<String, String, String, Length, String, Length, String> runway,
+  Runway runway,
 ) {
   return <String, String>{
-    'name': runway.item1,
-    'units': runway.item2,
-    'low': runway.item3,
-    'lowRange': runway.item4 != null ? '${runway.item4.inMeters}' : '',
-    'high': runway.item5,
-    'highRange': runway.item6 != null ? '${runway.item6.inMeters}' : '',
-    'trend': runway.item7,
+    'name': runway.name,
+    'units': 'meters',
+    'low': runway.rvrLow,
+    'lowRange': '${runway.lowRange.inMeters}',
+    'high': runway.rvrHigh,
+    'highRange': '${runway.highRange.inMeters}',
+    'trend': runway.trend,
   };
 }
 
@@ -121,10 +121,8 @@ class Metar {
   WindVariation _windVariation;
   Visibility _visibility, _trendVisibility, _minimumVisibility;
   Direction _minimumVisibilityDirection;
-  Length _optionalVisibility, _trendOptionalVisibility;
   bool _cavok, _trendCavok;
-  final _runway =
-      <Tuple7<String, String, String, Length, String, Length, String>>[];
+  final _runway = <Runway>[];
   final _weather = <Map<String, String>>[];
   final _trendWeather = <Map<String, String>>[];
   final _translations = SKY_TRANSLATIONS();
@@ -352,97 +350,24 @@ class Metar {
     }
 
     _string += '--- Visibility ---\n'
-        ' * Prevailing: ${vis.value.inMeters} meters\n'
-        ' * ${(cavok != null) ? 'CAVOK' : 'No CAVOK'}\n';
+        ' * Prevailing: ${vis.toString()}\n';
   }
 
   void _handleMinimunVisibility(RegExpMatch match) {
     _minimumVisibility = Visibility(match);
 
-    _string +=
-        ' * Minimum visibility: ${_minimumVisibility.value.inMeters} meters to ${_minimumVisibility.direction.cardinalDirection}\n';
+    _string += ' * Secondary: ${_minimumVisibility.toString()}';
   }
 
   void _handleRunway(RegExpMatch match) {
-    Tuple7<String, String, String, Length, String, Length, String> runway;
-
-    var name = match.namedGroup('name');
-    var rvrLow = match.namedGroup('rvrlow');
-    final lowRange = match.namedGroup('low');
-    var rvrHigh = match.namedGroup('rvrhigh');
-    final highRange = match.namedGroup('high');
-    var units = match.namedGroup('units');
-    var trend = match.namedGroup('trend');
-
-    // setting the range units
-    if (units == 'FT') {
-      units = 'feet';
-    } else {
-      units = 'meters';
-    }
-
-    // setting the trend
-    if (trend == 'N') {
-      trend = 'no change';
-    } else if (trend == 'U') {
-      trend = 'increasing';
-    } else if (trend == 'D') {
-      trend = 'decreasing';
-    } else {
-      trend = '';
-    }
-
-    // setting the name of runway
-    name = name
-        .substring(1)
-        .replaceFirst('L', ' left')
-        .replaceFirst('R', ' right')
-        .replaceFirst('C', ' center');
-
-    Length _extractRange(String range) {
-      if (range == null) {
-        return Length.fromMeters(value: 0.0);
-      }
-
-      final rangeValue = double.parse(range);
-
-      if (units == 'feet') {
-        return Length.fromFeet(value: rangeValue);
-      } else {
-        return Length.fromMeters(value: rangeValue);
-      }
-    }
-
-    String _translateRVR(String rvr) {
-      if (rvr == 'P') {
-        return 'greater than';
-      } else if (rvr == 'M') {
-        return 'less than';
-      } else {
-        return '';
-      }
-    }
-
-    runway = Tuple7(
-      name,
-      units,
-      _translateRVR(rvrLow),
-      _extractRange(lowRange),
-      _translateRVR(rvrHigh),
-      _extractRange(highRange),
-      trend,
-    );
-
+    final runway = Runway(match);
     // adding the runway
     _runway.add(runway);
 
     if (_runway.last == _runway[0]) {
       _string += ' * Runway:\n';
     }
-    _string += '   - Name: ${runway.item1}\n'
-        '     > Low range: ${runway.item3} ${runway.item4.inMeters} meters\n'
-        '     > High range: ${runway.item5} ${runway.item6.inMeters} meters\n'
-        '     > Trend: ${runway.item7}';
+    _string += runway.toString();
   }
 
   void _handleWeather(RegExpMatch match, {String section = 'body'}) {
@@ -795,6 +720,7 @@ class Metar {
       Tuple2(METAR_REGEX().WINDVARIATION_RE, _handleWindVariation),
       Tuple2(METAR_REGEX().VISIBILITY_RE, _handleVisibility),
       Tuple2(METAR_REGEX().VISIBILITY_RE, _handleMinimunVisibility),
+      Tuple2(METAR_REGEX().RUNWAY_RE, _handleRunway),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -887,33 +813,81 @@ class Metar {
   String get modifier => _modifier.modifier;
 
   /// Get the wind features of the report
-  /// * Direction
-  ///  ** inDegrees
-  ///  ** inRadians
-  ///  ** inGradians
-  ///  ** cardinalPoint
-  /// * Speed and Gust
-  ///  ** inKnot
-  ///  ** inKm/h
-  ///  ** inM/s
-  ///  ** inMiles/h
+  /// * direction
+  ///   - inDegrees
+  ///   - inRadians
+  ///   - inGradians
+  ///   - cardinalPoint
+  /// * speed and gust
+  ///   - inKnot
+  ///   - inKilometerPerHour
+  ///   - inMeterPerSecond
+  ///   - inMilesPerHour
   /// Some times it can be null depending of station, be carefull
   Wind get wind => _wind;
 
   /// Get the wind variation directions from and to, both instaces of Direction
-  /// * inDegrees
-  /// * inRadians
-  /// * inGradians
-  /// * cardinalPoint
+  /// *from/to
+  ///   - inDegrees
+  ///   - inRadians
+  ///   - inGradians
+  ///   - cardinalPoint
+  ///
   /// Some times it can be null depending of station, be carefull
   WindVariation get windVariation => _windVariation;
 
+  /// Get the visibility value and direction if provided, instances of Length
+  /// and Direction respectively
+  /// * value
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  /// * direction
+  ///   - inDegrees
+  ///   - inRadians
+  ///   - inGradians
+  ///   - cardinalPoint
   Visibility get visibility => _visibility;
+
+  /// Get the CAVOK state of the report as a boolean
   bool get cavok => _cavok;
+
+  /// Get the minimum visibility value and direction if provided, instances
+  /// of Length and Direction respectively
+  /// * value
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  /// * direction
+  ///   - inDegrees
+  ///   - inRadians
+  ///   - inGradians
+  ///   - cardinalPoint
   Visibility get minimumVisibility => _minimumVisibility;
-  Direction get minimumVisibilityDirection => _minimumVisibilityDirection;
-  List<Tuple7<String, String, String, Length, String, Length, String>>
-      get runwayRanges => _runway;
+
+  /// Get the runway ranges if provided as a list, every item has the values:
+  ///
+  /// These are String types
+  /// * name
+  /// * rvrLow
+  /// * rvrHigh
+  /// * trend
+  ///
+  /// These are Length types
+  /// * lowRange
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  /// * highRange
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  List<Runway> get runway => _runway;
+
   List<Map<String, String>> get weather => _weather;
   List<Tuple3<String, Length, String>> get sky => _sky;
   Temperature get temperature => _temperature;
