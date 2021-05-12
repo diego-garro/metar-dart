@@ -10,27 +10,27 @@ void main() {
     final weather_1 = metar.weather[0];
 
     test('Test the intensity', () {
-      final value = weather_1['intensity'];
+      final value = weather_1.intensity;
       expect(value, 'light');
     });
 
     test('Test the description', () {
-      final value = weather_1['description'];
+      final value = weather_1.description;
       expect(value, '');
     });
 
     test('Test the precipitation', () {
-      final value = weather_1['precipitation'];
+      final value = weather_1.precipitation;
       expect(value, 'snow');
     });
 
     test('Test the obscuration', () {
-      final value = weather_1['obscuration'];
+      final value = weather_1.obscuration;
       expect(value, '');
     });
 
     test('Test the other', () {
-      final value = weather_1['other'];
+      final value = weather_1.other;
       expect(value, '');
     });
   });
@@ -43,36 +43,36 @@ void main() {
     final weather_2 = metar.weather[1];
 
     test('Test the intensity', () {
-      final value_1 = weather_1['intensity'];
-      final value_2 = weather_2['intensity'];
+      final value_1 = weather_1.intensity;
+      final value_2 = weather_2.intensity;
       expect(value_1, '');
       expect(value_2, 'nearby');
     });
 
     test('Test the description', () {
-      final value_1 = weather_1['description'];
-      final value_2 = weather_2['description'];
+      final value_1 = weather_1.description;
+      final value_2 = weather_2.description;
       expect(value_1, '');
       expect(value_2, 'showers');
     });
 
     test('Test the precipitation', () {
-      final value_1 = weather_1['precipitation'];
-      final value_2 = weather_2['precipitation'];
+      final value_1 = weather_1.precipitation;
+      final value_2 = weather_2.precipitation;
       expect(value_1, 'drizzle');
       expect(value_2, '');
     });
 
     test('Test the obscuration', () {
-      final value_1 = weather_1['obscuration'];
-      final value_2 = weather_2['obscuration'];
+      final value_1 = weather_1.obscuration;
+      final value_2 = weather_2.obscuration;
       expect(value_1, '');
       expect(value_2, '');
     });
 
     test('Test the other', () {
-      final value_1 = weather_1['other'];
-      final value_2 = weather_2['other'];
+      final value_1 = weather_1.other;
+      final value_2 = weather_2.other;
       expect(value_1, '');
       expect(value_2, '');
     });
@@ -87,45 +87,45 @@ void main() {
     final weather_3 = metar.weather[2];
 
     test('Test the intensity', () {
-      final value_1 = weather_1['intensity'];
-      final value_2 = weather_2['intensity'];
-      final value_3 = weather_3['intensity'];
+      final value_1 = weather_1.intensity;
+      final value_2 = weather_2.intensity;
+      final value_3 = weather_3.intensity;
       expect(value_1, '');
       expect(value_2, '');
       expect(value_3, 'nearby');
     });
 
     test('Test the description', () {
-      final value_1 = weather_1['description'];
-      final value_2 = weather_2['description'];
-      final value_3 = weather_3['description'];
+      final value_1 = weather_1.description;
+      final value_2 = weather_2.description;
+      final value_3 = weather_3.description;
       expect(value_1, '');
       expect(value_2, '');
       expect(value_3, 'thunderstorm');
     });
 
     test('Test the precipitation', () {
-      final value_1 = weather_1['precipitation'];
-      final value_2 = weather_2['precipitation'];
-      final value_3 = weather_3['precipitation'];
+      final value_1 = weather_1.precipitation;
+      final value_2 = weather_2.precipitation;
+      final value_3 = weather_3.precipitation;
       expect(value_1, 'rain');
       expect(value_2, '');
       expect(value_3, '');
     });
 
     test('Test the obscuration', () {
-      final value_1 = weather_1['obscuration'];
-      final value_2 = weather_2['obscuration'];
-      final value_3 = weather_3['obscuration'];
+      final value_1 = weather_1.obscuration;
+      final value_2 = weather_2.obscuration;
+      final value_3 = weather_3.obscuration;
       expect(value_1, '');
       expect(value_2, 'mist');
       expect(value_3, '');
     });
 
     test('Test the other', () {
-      final value_1 = weather_1['other'];
-      final value_2 = weather_2['other'];
-      final value_3 = weather_3['other'];
+      final value_1 = weather_1.other;
+      final value_2 = weather_2.other;
+      final value_3 = weather_3.other;
       expect(value_1, '');
       expect(value_2, '');
       expect(value_3, '');

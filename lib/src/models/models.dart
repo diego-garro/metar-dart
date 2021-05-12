@@ -6,3 +6,4 @@ export 'package:metar_dart/src/models/wind.dart';
 export 'package:metar_dart/src/models/wind_variation.dart';
 export 'package:metar_dart/src/models/visibility.dart';
 export 'package:metar_dart/src/models/runway.dart';
+export 'package:metar_dart/src/models/weather.dart';

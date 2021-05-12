@@ -122,9 +122,9 @@ class Metar {
   Visibility _visibility, _trendVisibility, _minimumVisibility;
   Direction _minimumVisibilityDirection;
   bool _cavok, _trendCavok;
+  final _weather = <Weather>[];
+  final _trendWeather = <Weather>[];
   final _runway = <Runway>[];
-  final _weather = <Map<String, String>>[];
-  final _trendWeather = <Map<String, String>>[];
   final _translations = SKY_TRANSLATIONS();
   final _sky = <Tuple3<String, Length, String>>[];
   final _trendSky = <Tuple3<String, Length, String>>[];
@@ -229,11 +229,7 @@ class Metar {
       },
       'weather': <String>[
         for (var weather in _weather)
-          weather.values
-              .toList()
-              .join(' ')
-              .replaceAll(RegExp(r'\s{2,}'), ' ')
-              .trim(),
+          weather.toList().join(' ').replaceAll(RegExp(r'\s{2,}'), ' ').trim(),
       ],
       'sky': <String>[
         for (var layer in _sky) _extractSkyData(layer),
@@ -371,26 +367,7 @@ class Metar {
   }
 
   void _handleWeather(RegExpMatch match, {String section = 'body'}) {
-    Map<String, String> weather;
-
-    final intensity = match.namedGroup('intensity');
-    final description = match.namedGroup('descrip');
-    final precipitation = match.namedGroup('precip');
-    final obscuration = match.namedGroup('obsc');
-    final other = match.namedGroup('other');
-
-    weather = {
-      'intensity':
-          intensity != null ? _translations.WEATHER_INT[intensity] : '',
-      'description':
-          description != null ? _translations.WEATHER_DESC[description] : '',
-      'precipitation': precipitation != null
-          ? _translations.WEATHER_PREC[precipitation]
-          : '',
-      'obscuration':
-          obscuration != null ? _translations.WEATHER_OBSC[obscuration] : '',
-      'other': other != null ? _translations.WEATHER_OTHER[other] : '',
-    };
+    final weather = Weather(match);
 
     if (section == 'body') {
       _weather.add(weather);
@@ -403,15 +380,7 @@ class Metar {
       _string += '--- Weather ---\n';
     }
 
-    final s = '${weather["intensity"]}'
-        ' ${weather["description"]}'
-        ' ${weather["precipitation"]}'
-        ' ${weather["obscuration"]}'
-        ' ${weather["other"]}';
-
-    _string += ' * ' +
-        capitalize(s.replaceAll(RegExp(r'\s{2,}'), ' ').trimLeft()) +
-        '\n';
+    _string += ' * ' + capitalize(weather.toString()) + '\n';
   }
 
   void _handleSky(RegExpMatch match, {String section = 'body'}) {
@@ -721,6 +690,9 @@ class Metar {
       Tuple2(METAR_REGEX().VISIBILITY_RE, _handleVisibility),
       Tuple2(METAR_REGEX().VISIBILITY_RE, _handleMinimunVisibility),
       Tuple2(METAR_REGEX().RUNWAY_RE, _handleRunway),
+      Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
+      Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
+      Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -888,7 +860,15 @@ class Metar {
   ///   - inFeet
   List<Runway> get runway => _runway;
 
-  List<Map<String, String>> get weather => _weather;
+  /// Get the weather if provided as a list, every tem has the values:
+  /// * intensity
+  /// * description
+  /// * precipitation
+  /// * obscuration
+  /// * other
+  /// All the values are type String
+  List<Weather> get weather => _weather;
+
   List<Tuple3<String, Length, String>> get sky => _sky;
   Temperature get temperature => _temperature;
   Temperature get dewpoint => _dewpoint;
@@ -925,6 +905,6 @@ class Metar {
   Speed get trendWindGust => _trendWind.gust;
 
   Visibility get trendVisibility => _trendVisibility;
-  List<Map<String, String>> get trendWeather => _trendWeather;
+  List<Weather> get trendWeather => _trendWeather;
   List<Tuple3<String, Length, String>> get trendSky => _trendSky;
 }
