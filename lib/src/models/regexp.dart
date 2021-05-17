@@ -21,8 +21,6 @@ class METAR_REGEX {
   RegExp VISIBILITY_RE = RegExp(
       r'^(?<vis>\d{4}|\//\//)(?<dir>[NSEW]([EW])?)?|((?<opt>\d)_)?(M|P)?(?<visextreme>\d{1,2}|\d/\d)(?<units>SM|KM|M|U)|(?<cavok>CAVOK)$');
 
-  //RegExp SECVISIBILITY_RE = RegExp(r'^(?<vis>\d{4})(?<dir>[NSEW]([EW])?)$');
-
   RegExp RUNWAY_RE = RegExp(
       r'^(?<name>R\d{2}([RLC])?)/(?<rvrlow>[MP])?(?<low>\d{2,4})(V(?<rvrhigh>[MP])?(?<high>\d{2,4}))?(?<units>FT)?(?<trend>[NDU])?$');
 

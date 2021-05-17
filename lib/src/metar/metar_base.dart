@@ -99,13 +99,6 @@ Map<String, String> _extractRunwayData(
   };
 }
 
-String _extractSkyData(Tuple3<String, Length, String> layer) {
-  final height =
-      layer.item2.inFeet == 0 ? '' : ' at ${layer.item2.inFeet} feet';
-  final cloud = layer.item3 != '' ? ' of ${layer.item3}' : '';
-  return '${layer.item1}$height$cloud';
-}
-
 /// Metar model to parse the code for every station
 class Metar {
   String _body, _trend, _rmk;
@@ -126,8 +119,8 @@ class Metar {
   final _trendWeather = <Weather>[];
   final _runway = <Runway>[];
   final _translations = SKY_TRANSLATIONS();
-  final _sky = <Tuple3<String, Length, String>>[];
-  final _trendSky = <Tuple3<String, Length, String>>[];
+  final _sky = <SkyLayer>[];
+  final _trendSky = <SkyLayer>[];
   Temperature _temperature, _dewpoint;
   Pressure _pressure;
   Map<String, String> _recentWeather;
@@ -232,7 +225,7 @@ class Metar {
           weather.toList().join(' ').replaceAll(RegExp(r'\s{2,}'), ' ').trim(),
       ],
       'sky': <String>[
-        for (var layer in _sky) _extractSkyData(layer),
+        for (var layer in _sky) layer.toString(),
       ],
       'temperatures': <String, String>{
         'units': '°C',
@@ -384,24 +377,7 @@ class Metar {
   }
 
   void _handleSky(RegExpMatch match, {String section = 'body'}) {
-    Tuple3<String, Length, String> layer;
-    Length heightValue;
-
-    final cover = match.namedGroup('cover');
-    final height = match.namedGroup('height');
-    final cloud = match.namedGroup('cloud');
-
-    if (height == '///' || height == null) {
-      heightValue = Length.fromFeet();
-    } else {
-      heightValue = Length.fromFeet(value: double.parse(height) * 100.0);
-    }
-
-    layer = Tuple3(
-      _translations.SKY_COVER[cover],
-      heightValue,
-      cloud != null ? _translations.CLOUD_TYPE[cloud] : '',
-    );
+    final layer = SkyLayer(match);
 
     if (section == 'body') {
       _sky.add(layer);
@@ -414,9 +390,7 @@ class Metar {
       _string += '--- Sky ---\n';
     }
 
-    _string += ' * ${capitalize(layer.item1)}'
-        ' ${layer.item2.inFeet != 0.0 ? "at ${layer.item2.inFeet} feet" : ""}'
-        ' ${layer.item3 != "" ? "of ${layer.item3}" : ""}\n';
+    _string += ' * ${layer.toString()}\n';
   }
 
   void _handleTemperatures(RegExpMatch match) {
@@ -693,6 +667,10 @@ class Metar {
       Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
       Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
       Tuple2(METAR_REGEX().WEATHER_RE, _handleWeather),
+      Tuple2(METAR_REGEX().SKY_RE, _handleSky),
+      Tuple2(METAR_REGEX().SKY_RE, _handleSky),
+      Tuple2(METAR_REGEX().SKY_RE, _handleSky),
+      Tuple2(METAR_REGEX().SKY_RE, _handleSky),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -869,7 +847,19 @@ class Metar {
   /// All the values are type String
   List<Weather> get weather => _weather;
 
-  List<Tuple3<String, Length, String>> get sky => _sky;
+  /// Get the sky layers as a list, every item has the values:
+  ///
+  /// These are String types
+  /// * cover
+  /// * cloud
+  ///
+  /// This is a Length type
+  /// * height
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  List<SkyLayer> get sky => _sky;
   Temperature get temperature => _temperature;
   Temperature get dewpoint => _dewpoint;
   Pressure get pressure => _pressure;
@@ -904,7 +894,40 @@ class Metar {
   /// Some times it can be null depending of station, be carefull
   Speed get trendWindGust => _trendWind.gust;
 
+  /// Get the visibility value and direction if provided, instances of Length
+  /// and Direction respectively
+  /// * value
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  /// * direction
+  ///   - inDegrees
+  ///   - inRadians
+  ///   - inGradians
+  ///   - cardinalPoint
   Visibility get trendVisibility => _trendVisibility;
+
+  /// Get the weather if provided as a list, every tem has the values:
+  /// * intensity
+  /// * description
+  /// * precipitation
+  /// * obscuration
+  /// * other
+  /// All the values are type String
   List<Weather> get trendWeather => _trendWeather;
-  List<Tuple3<String, Length, String>> get trendSky => _trendSky;
+
+  /// Get the sky layers as a list, every item has the values:
+  ///
+  /// These are String types
+  /// * cover
+  /// * cloud
+  ///
+  /// This is a Length type
+  /// * height
+  ///   - inMeters
+  ///   - inKilometers
+  ///   - inMiles
+  ///   - inFeet
+  List<SkyLayer> get trendSky => _trendSky;
 }
