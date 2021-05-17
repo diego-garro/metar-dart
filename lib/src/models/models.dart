@@ -8,3 +8,4 @@ export 'package:metar_dart/src/models/visibility.dart';
 export 'package:metar_dart/src/models/runway.dart';
 export 'package:metar_dart/src/models/weather.dart';
 export 'package:metar_dart/src/models/sky.dart';
+export 'package:metar_dart/src/models/temperatures.dart';

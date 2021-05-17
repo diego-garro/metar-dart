@@ -121,7 +121,7 @@ class Metar {
   final _translations = SKY_TRANSLATIONS();
   final _sky = <SkyLayer>[];
   final _trendSky = <SkyLayer>[];
-  Temperature _temperature, _dewpoint;
+  Temperatures _temps;
   Pressure _pressure;
   Map<String, String> _recentWeather;
   final _windshear = <String>[];
@@ -229,8 +229,8 @@ class Metar {
       ],
       'temperatures': <String, String>{
         'units': '°C',
-        'absolute': '${_temperature?.inCelsius}',
-        'dewpoint': '${_dewpoint?.inCelsius}',
+        'absolute': '${_temps?.temperature?.inCelsius}',
+        'dewpoint': '${_temps?.dewpoint?.inCelsius}',
       },
       'pressure': <String, String>{
         'units': 'hPa',
@@ -394,32 +394,9 @@ class Metar {
   }
 
   void _handleTemperatures(RegExpMatch match) {
-    final regex = RegExp(r'^\d{2}$');
+    _temps = Temperatures(match);
 
-    final tempSign = match.namedGroup('tsign');
-    final temperature = match.namedGroup('temp');
-    final dewptSign = match.namedGroup('dsign');
-    final dewpoint = match.namedGroup('dewpt');
-
-    Temperature defineTemperature(String sign, String temp) {
-      if (sign == 'M' || sign == '-') {
-        return Temperature.fromCelsius(value: double.parse('-$temp'));
-      }
-
-      return Temperature.fromCelsius(value: double.parse(temp));
-    }
-
-    if (regex.hasMatch(temperature)) {
-      _temperature = defineTemperature(tempSign, temperature);
-    }
-
-    if (regex.hasMatch(dewpoint)) {
-      _dewpoint = defineTemperature(dewptSign, dewpoint);
-    }
-
-    _string += '--- Temperatures ---\n'
-        ' * Absolute: ${_temperature != null ? "${_temperature.inCelsius}°C" : "unknown"}\n'
-        ' * Dewpoint: ${_dewpoint != null ? "${_dewpoint.inCelsius}°C" : "unknown"}\n';
+    _string += '--- Temperatures ---\n${_temps.toString()}\n';
   }
 
   void _handlePressure(RegExpMatch match) {
@@ -671,6 +648,7 @@ class Metar {
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
+      Tuple2(METAR_REGEX().TEMP_RE, _handleTemperatures),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -860,8 +838,17 @@ class Metar {
   ///   - inMiles
   ///   - inFeet
   List<SkyLayer> get sky => _sky;
-  Temperature get temperature => _temperature;
-  Temperature get dewpoint => _dewpoint;
+
+  /// Get the temperatures if provided, temperature and dewpoint instances of
+  /// Temperature
+  /// * temperature
+  /// * dewpoint
+  ///   - inCelsius
+  ///   - inFahrenheit
+  ///   - inKelvin
+  ///   - inRankine
+  ///   - inRomer
+  Temperatures get temperatures => _temps;
   Pressure get pressure => _pressure;
   Map<String, String> get recentWeather => _recentWeather;
   List<String> get windshear => _windshear;
