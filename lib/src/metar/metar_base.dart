@@ -401,8 +401,8 @@ class Metar {
 
   void _handlePressure(RegExpMatch match) {
     final units = match.namedGroup('units');
-    final press = match.namedGroup('press');
     final units2 = match.namedGroup('units2');
+    final press = match.namedGroup('press');
 
     if (press != '\//\//') {
       var pressAsDouble = double.parse(press);
@@ -425,8 +425,8 @@ class Metar {
       }
     }
 
-    _string += '--- Pressure ---\n'
-        ' * ${_pressure.inHPa} hPa\n';
+    _string += '--- Pressure ---\n' +
+        (_pressure != null ? ' * ${_pressure.inHPa} hPa\n' : ' * \n');
   }
 
   void _handleRecentWeather(RegExpMatch match) {
@@ -649,6 +649,7 @@ class Metar {
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
       Tuple2(METAR_REGEX().TEMP_RE, _handleTemperatures),
+      Tuple2(METAR_REGEX().PRESS_RE, _handlePressure),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -849,6 +850,11 @@ class Metar {
   ///   - inRankine
   ///   - inRomer
   Temperatures get temperatures => _temps;
+
+  /// Get the pressure or QNH if provided, instance of pressure
+  /// - inHPa
+  /// - inInHg
+  /// - inMb
   Pressure get pressure => _pressure;
   Map<String, String> get recentWeather => _recentWeather;
   List<String> get windshear => _windshear;
