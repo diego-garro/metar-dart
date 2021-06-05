@@ -9,7 +9,7 @@ void main() {
     final metar = Metar(code);
 
     test('First test.', () {
-      final value = metar.windshear[0];
+      final value = metar.windshear[0].runway;
       expect(value, '07');
     });
   });
@@ -20,12 +20,12 @@ void main() {
     final metar = Metar(code);
 
     test('First test.', () {
-      final value = metar.windshear[0];
+      final value = metar.windshear[0].runway;
       expect(value, '07 left');
     });
 
     test('Second test.', () {
-      final value = metar.windshear[1];
+      final value = metar.windshear[1].runway;
       expect(value, '25 center');
     });
   });
@@ -36,7 +36,7 @@ void main() {
     final metar = Metar(code);
 
     test('First test.', () {
-      final value = metar.windshear[0];
+      final value = metar.windshear[0].runway;
       expect(value, 'All');
     });
   });

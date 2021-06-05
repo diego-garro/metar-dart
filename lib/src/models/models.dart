@@ -10,3 +10,4 @@ export 'package:metar_dart/src/models/weather.dart';
 export 'package:metar_dart/src/models/sky.dart';
 export 'package:metar_dart/src/models/temperatures.dart';
 export 'package:metar_dart/src/models/recent_weather.dart';
+export 'package:metar_dart/src/models/windshear.dart';

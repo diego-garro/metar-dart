@@ -124,7 +124,7 @@ class Metar {
   Temperatures _temps;
   Pressure _pressure;
   RecentWeather _recentWeather;
-  final _windshear = <String>[];
+  final _windshear = <Windshear>[];
   Tuple2<Temperature, String> _seaState;
   Map<String, String> _runwayState;
 
@@ -238,7 +238,7 @@ class Metar {
       },
       'suplementaryInfo': {
         'weather': _recentWeather?.toString(),
-        'windshear': _windshear.join(' '),
+        'windshear': _windshear.map((ws) => ws.runway).toList().join(' '),
         'seaState': <String, String>{
           'units': '°C',
           'temperature':
@@ -433,27 +433,13 @@ class Metar {
   }
 
   void _handleWindshear(RegExpMatch match) {
-    final all = match.namedGroup('all');
-    final number = match.namedGroup('num');
-    final name = match.namedGroup('name');
-
-    final rwyNames = {
-      'R': 'right',
-      'L': 'left',
-      'C': 'center',
-    };
-
-    if (all != null) {
-      _windshear.add(capitalize(all));
-    } else {
-      _windshear.add('$number${name != null ? " ${rwyNames[name]}" : ""}');
-    }
+    _windshear.add(Windshear(match));
 
     if (_windshear.length == 1) {
       _string += '--- Windshear ---\n';
     }
 
-    _string += ' * ${capitalize(_windshear.last)}';
+    _string += ' * ${capitalize(_windshear.last.toString())}';
   }
 
   void _handleSeaState(RegExpMatch match) {
@@ -625,6 +611,9 @@ class Metar {
       Tuple2(METAR_REGEX().TEMP_RE, _handleTemperatures),
       Tuple2(METAR_REGEX().PRESS_RE, _handlePressure),
       Tuple2(METAR_REGEX().RECENT_RE, _handleRecentWeather),
+      Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
+      Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
+      Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -838,7 +827,10 @@ class Metar {
   /// * obscuration
   /// * other
   RecentWeather get recentWeather => _recentWeather;
-  List<String> get windshear => _windshear;
+
+  /// Get the windshear in suplementary information if provided
+  /// * runway
+  List<Windshear> get windshear => _windshear;
   Tuple2<Temperature, String> get seaState => _seaState;
   Map<String, String> get runwayState => _runwayState;
 
