@@ -123,7 +123,7 @@ class Metar {
   final _trendSky = <SkyLayer>[];
   Temperatures _temps;
   Pressure _pressure;
-  Map<String, String> _recentWeather;
+  RecentWeather _recentWeather;
   final _windshear = <String>[];
   Tuple2<Temperature, String> _seaState;
   Map<String, String> _runwayState;
@@ -237,11 +237,7 @@ class Metar {
         'value': '${_pressure?.inHPa}',
       },
       'suplementaryInfo': {
-        'weather': _recentWeather?.values
-            ?.toList()
-            ?.join(' ')
-            ?.replaceAll(RegExp(r'\s{2,}'), ' ')
-            ?.trim(),
+        'weather': _recentWeather?.toString(),
         'windshear': _windshear.join(' '),
         'seaState': <String, String>{
           'units': '°C',
@@ -430,32 +426,10 @@ class Metar {
   }
 
   void _handleRecentWeather(RegExpMatch match) {
-    final description = match.namedGroup('descrip');
-    final precipitation = match.namedGroup('precip');
-    final obscuration = match.namedGroup('obsc');
-    final other = match.namedGroup('other');
-
-    _recentWeather = {
-      'description':
-          description != null ? _translations.WEATHER_DESC[description] : '',
-      'precipitation': precipitation != null
-          ? _translations.WEATHER_PREC[precipitation]
-          : '',
-      'obscuration':
-          obscuration != null ? _translations.WEATHER_OBSC[obscuration] : '',
-      'other': other != null ? _translations.WEATHER_OTHER[other] : '',
-    };
+    _recentWeather = RecentWeather(match);
 
     _string += '--- Recent Weather ---\n';
-
-    final s = '${_recentWeather["description"]}'
-        ' ${_recentWeather["precipitation"]}'
-        ' ${_recentWeather["obscuration"]}'
-        ' ${_recentWeather["other"]}';
-
-    _string += ' * ' +
-        capitalize(s.replaceAll(RegExp(r'\s{2,}'), ' ').trimLeft()) +
-        '\n';
+    _string += ' * ' + capitalize(_recentWeather.toString()) + '\n';
   }
 
   void _handleWindshear(RegExpMatch match) {
@@ -650,6 +624,7 @@ class Metar {
       Tuple2(METAR_REGEX().SKY_RE, _handleSky),
       Tuple2(METAR_REGEX().TEMP_RE, _handleTemperatures),
       Tuple2(METAR_REGEX().PRESS_RE, _handlePressure),
+      Tuple2(METAR_REGEX().RECENT_RE, _handleRecentWeather),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -856,7 +831,13 @@ class Metar {
   /// - inInHg
   /// - inMb
   Pressure get pressure => _pressure;
-  Map<String, String> get recentWeather => _recentWeather;
+
+  /// Get the recent weather in suplementary information, if provided
+  /// * description
+  /// * precipitation
+  /// * obscuration
+  /// * other
+  RecentWeather get recentWeather => _recentWeather;
   List<String> get windshear => _windshear;
   Tuple2<Temperature, String> get seaState => _seaState;
   Map<String, String> get runwayState => _runwayState;
