@@ -125,7 +125,7 @@ class Metar {
   Pressure _pressure;
   RecentWeather _recentWeather;
   final _windshear = <Windshear>[];
-  Tuple2<Temperature, String> _seaState;
+  SeaState _seaState;
   Map<String, String> _runwayState;
 
   Metar(String code, {int utcMonth, int utcYear}) {
@@ -242,8 +242,8 @@ class Metar {
         'seaState': <String, String>{
           'units': '°C',
           'temperature':
-              _seaState != null ? '${_seaState.item1?.inCelsius}' : null,
-          'state': _seaState != null ? _seaState.item2.toLowerCase() : null,
+              _seaState != null ? '${_seaState.temperature.inCelsius}' : null,
+          'state': _seaState != null ? _seaState.state.toLowerCase() : null,
         },
         'runwayState': _runwayState?.values
             ?.toList()
@@ -443,23 +443,10 @@ class Metar {
   }
 
   void _handleSeaState(RegExpMatch match) {
-    Temperature temp;
-
-    final sign = match.namedGroup('sign');
-    final temperature = match.namedGroup('temp');
-    final state = match.namedGroup('state');
-
-    if (sign == 'M') {
-      temp = Temperature.fromCelsius(value: double.parse('-' + temperature));
-    } else {
-      temp = Temperature.fromCelsius(value: double.parse(temperature));
-    }
-
-    _seaState = Tuple2(temp, capitalize(_translations.SEA_STATE[state]));
+    _seaState = SeaState(match);
 
     _string += '--- Sea State ---\n'
-        ' * Temperature: ${temp.inCelsius}°\n'
-        ' * State: ${_seaState.item2}\n';
+        ' * ${_seaState.toString()}';
   }
 
   void _handleRunwayState(RegExpMatch match) {
@@ -614,6 +601,7 @@ class Metar {
       Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
       Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
       Tuple2(METAR_REGEX().WINDSHEAR_RUNWAY_RE, _handleWindshear),
+      Tuple2(METAR_REGEX().SEASTATE_RE, _handleSeaState),
     ];
 
     _parseGroups(_body.split(' '), handlers);
@@ -831,7 +819,11 @@ class Metar {
   /// Get the windshear in suplementary information if provided
   /// * runway
   List<Windshear> get windshear => _windshear;
-  Tuple2<Temperature, String> get seaState => _seaState;
+
+  /// Get the sea state if provided
+  /// * temperature
+  /// * state
+  SeaState get seaState => _seaState;
   Map<String, String> get runwayState => _runwayState;
 
   // Trend getters

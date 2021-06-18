@@ -10,12 +10,12 @@ void main() {
     final seaState = metar.seaState;
 
     test('Test the temperature', () {
-      final value = seaState.item1.inCelsius;
+      final value = seaState.temperature.inCelsius;
       expect(value, 20.0);
     });
 
     test('Test the state', () {
-      final value = seaState.item2;
+      final value = seaState.state;
       expect(value, 'Rough');
     });
   });
@@ -27,12 +27,12 @@ void main() {
     final seaState = metar.seaState;
 
     test('Test the temperature', () {
-      final value = seaState.item1.inCelsius;
+      final value = seaState.temperature.inCelsius;
       expect(value, -1.0);
     });
 
     test('Test the state', () {
-      final value = seaState.item2;
+      final value = seaState.state;
       expect(value, 'Very high');
     });
   });
